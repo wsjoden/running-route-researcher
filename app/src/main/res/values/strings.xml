@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Running Route Researcher</string>
     <string name="settings_button">Route Settings</string>
+    <string name="settings">Settings</string>
+    <string name="back_button">← Back</string>
+    <string name="distance_label">Distance (km)</string>
+    <string name="distance_hint">Enter distance in km</string>
+    <string name="generate_route_button">Generate Route</string>
 </resources>
