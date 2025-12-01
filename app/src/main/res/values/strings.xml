@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Running Route Researcher</string>
+    <string name="settings_button">Route Settings</string>
+</resources>
