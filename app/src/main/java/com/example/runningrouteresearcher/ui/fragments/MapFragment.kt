@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.example.runningrouteresearcher.data.Route
 import com.example.runningrouteresearcher.viewmodels.MapViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -68,8 +69,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
 
         viewModel.route.observe(viewLifecycleOwner) { route ->
-            // TODO: Draw the route on the map
-            println("Route: $route")
+            if (route != null) {
+                drawRouteOnMap(route)
+            }
         }
     }
 
@@ -118,5 +120,38 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+    private fun drawRouteOnMap(route: Route) {
+        // Clear previous polylines
+        mMap.clear()
+
+        // Re-add user location marker
+        // (We'll improve this later)
+
+        // Draw the route as a polyline
+        mMap.addPolyline(
+            com.google.android.gms.maps.model.PolylineOptions()
+                .addAll(route.polylinePoints)
+                .color(android.graphics.Color.BLUE)
+                .width(8f)
+        )
+
+        // Draw waypoints as markers
+        for ((index, waypoint) in route.waypoints.withIndex()) {
+            mMap.addMarker(
+                MarkerOptions()
+                    .position(waypoint)
+                    .title("Waypoint $index")
+            )
+        }
+
+        // Zoom to fit the route
+        val bounds = com.google.android.gms.maps.model.LatLngBounds.Builder()
+        for (point in route.waypoints) {
+            bounds.include(point)
+        }
+        mMap.animateCamera(
+            CameraUpdateFactory.newLatLngBounds(bounds.build(), 100)
+        )
     }
 }

@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.example.runningrouteresearcher.R
 import com.example.runningrouteresearcher.viewmodels.MapViewModel
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
@@ -35,12 +35,14 @@ class SettingsFragment : BottomSheetDialogFragment() {
 
         val distanceInput = view.findViewById<EditText>(R.id.distance_input)
         val generateButton = view.findViewById<Button>(R.id.generate_route_button)
-
         generateButton.setOnClickListener {
             val distance = distanceInput.text.toString().toDoubleOrNull()
             if (distance != null && distance > 0) {
-                viewModel.generateRoute(distance)
-                dismiss() // Close settings after generating
+                // Get user location (you'll need to pass this from MapFragment)
+                // For now, use a default or get from MapFragment
+                val userLocation = LatLng(37.7749, -122.4194) // TODO: Get actual user location
+                viewModel.generateRoute(userLocation, distance)
+                dismiss()
             }
         }
     }
