@@ -6,4 +6,5 @@
     <string name="distance_label">Distance (km)</string>
     <string name="distance_hint">Enter distance in km</string>
     <string name="generate_route_button">Generate Route</string>
+    <string name="my_location_button">My Location</string>
 </resources>
