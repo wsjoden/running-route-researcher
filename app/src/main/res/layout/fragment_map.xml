@@ -15,13 +15,39 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <Button
-            android:id="@+id/settings_button"
+        <!-- Spacer to push buttons to bottom -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Bottom buttons -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/settings_button"
-            android:layout_gravity="end"
-            android:layout_marginTop="16dp" />
+            android:orientation="vertical"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="32dp"
+            android:gravity="end">
+
+            <ImageButton
+                android:id="@+id/my_location_button"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/my_location"
+                android:contentDescription="@string/my_location_button"
+                android:layout_marginBottom="8dp"
+                android:scaleType="centerInside"
+                android:background="@drawable/button_background" />
+
+            <Button
+                android:id="@+id/settings_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_button"
+                android:background="@drawable/button_background" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
