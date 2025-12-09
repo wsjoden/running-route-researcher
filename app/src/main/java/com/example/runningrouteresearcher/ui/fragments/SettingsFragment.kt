@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import com.example.runningrouteresearcher.R
 import com.example.runningrouteresearcher.viewmodels.MapViewModel
@@ -16,6 +17,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 class SettingsFragment : BottomSheetDialogFragment() {
 
     private val viewModel: MapViewModel by activityViewModels()
+    private var userLocation: LatLng? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,15 +37,23 @@ class SettingsFragment : BottomSheetDialogFragment() {
 
         val distanceInput = view.findViewById<EditText>(R.id.distance_input)
         val generateButton = view.findViewById<Button>(R.id.generate_route_button)
+
         generateButton.setOnClickListener {
             val distance = distanceInput.text.toString().toDoubleOrNull()
-            if (distance != null && distance > 0) {
-                // Get user location (you'll need to pass this from MapFragment)
-                // For now, use a default or get from MapFragment
-                val userLocation = LatLng(37.7749, -122.4194) // TODO: Get actual user location
-                viewModel.generateRoute(userLocation, distance)
-                dismiss()
+
+            if(distance == null || distance <= 0) {
+                Toast.makeText(context, "Enter a valid distance",
+                    Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
+
+            if(userLocation == null) {
+                Toast.makeText(context, "Location not available, wait",
+                    Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            viewModel.generateRoute(userLocation!!,distance)
+            dismiss()
         }
     }
 
@@ -62,5 +72,8 @@ class SettingsFragment : BottomSheetDialogFragment() {
                 behavior.isDraggable = true
             }
         }
+    }
+    fun setUserLocation(location: LatLng) {
+        userLocation = location
     }
 }
