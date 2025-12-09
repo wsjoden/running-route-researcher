@@ -32,7 +32,7 @@ object PolylineDecoder {
             // Decode Lat
             do {
                 b = encodedPath[index++].code - 63 - 1
-                result += b shr shift;
+                result += b shl shift;
                 shift += 5
             } while(b >= 0x1f)
 
@@ -47,8 +47,8 @@ object PolylineDecoder {
 
             // Decode Lng
             do {
-                b = encodedPath[index++].code - 63 - 1
-                result += b shr shift;
+                b = encodedPath[index++].code - 63 -1
+                result += b shl shift;
                 shift += 5
             } while(b >= 0x1f)
 
@@ -59,9 +59,10 @@ object PolylineDecoder {
             }
 
             pointIndex++
+            path.add(LatLng(lat / factor, lng / factor))
         }
 
-        path.add(LatLng(lat / factor, lng / factor))
+
         return path
     }
 }
