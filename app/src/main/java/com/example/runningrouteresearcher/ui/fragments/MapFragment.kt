@@ -1,9 +1,11 @@
 package com.example.runningrouteresearcher.ui.fragments
 
+import com.example.runningrouteresearcher.utils.MarkerMaker
 import android.Manifest
 import android.content.pm.PackageManager
 import com.example.runningrouteresearcher.R
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,11 +25,14 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 
 class MapFragment : Fragment(), OnMapReadyCallback {
     private lateinit var mMap: GoogleMap
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val viewModel: MapViewModel by activityViewModels()
+    private var currentUserLocation: LatLng? = null
 
     // Location permission request launcher
     private val requestPermissionLauncher = registerForActivityResult(
@@ -77,6 +82,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private fun openSettings() {
         val settingsFragment = SettingsFragment()
+        if(currentUserLocation != null) {
+            settingsFragment.setUserLocation(currentUserLocation!!)
+        }
         settingsFragment.show(parentFragmentManager, "settings")
     }
 
@@ -101,32 +109,53 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        val userLocation = LatLng(location.latitude, location.longitude)
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { location ->
+                        if (location != null) {
+                            val userLocation = LatLng(location.latitude, location.longitude)
+                            currentUserLocation = userLocation
 
-                        // Center map on user location
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15f))
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15f))
+                            mMap.addMarker(
+                                MarkerOptions()
+                                    .position(userLocation)
+                                    .title("You are here")
+                            )
 
-                        // Add marker at user location
-                        mMap.addMarker(
-                            MarkerOptions()
-                                .position(userLocation)
-                                .title("You are here")
-                        )
+                            Log.d("MapFragment", "Location set: $userLocation")
+                        } else {
+                            Log.d("MapFragment", "Location is NULL - emulator has no cached location")
+                        }
                     }
-                }
+                    .addOnFailureListener { e ->
+                        Log.e("MapFragment", "Location failed: ${e.message}")
+                        e.printStackTrace()
+                    }
+            } else {
+                Log.d("MapFragment", "Permission not granted")
             }
         } catch (e: Exception) {
+            Log.e("MapFragment", "Exception in getCurrentLocation: ${e.message}")
             e.printStackTrace()
         }
     }
     private fun drawRouteOnMap(route: Route) {
+        Log.d("MapFragment", "drawRouteOnMap called")
+        Log.d("MapFragment", "Route waypoints: ${route.waypoints.size}")
+        Log.d("MapFragment", "Route polylinePoints: ${route.polylinePoints.size}")
+        Log.d("MapFragment", "First 3 polyline points: ${route.polylinePoints.take(3)}")
+
         // Clear previous polylines
         mMap.clear()
 
         // Re-add user location marker
-        // (We'll improve this later)
+        if (currentUserLocation != null) {
+            mMap.addMarker(
+                MarkerOptions()
+                    .position(currentUserLocation!!)
+                    .title("Start/End")
+            )
+        }
 
         // Draw the route as a polyline
         mMap.addPolyline(
@@ -138,11 +167,22 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
         // Draw waypoints as markers
         for ((index, waypoint) in route.waypoints.withIndex()) {
-            mMap.addMarker(
-                MarkerOptions()
-                    .position(waypoint)
-                    .title("Waypoint $index")
-            )
+            if (index == 0 || index == route.waypoints.size - 1) {
+                // Start/End marker - use default Google Maps pin
+                mMap.addMarker(
+                    MarkerOptions()
+                        .position(waypoint)
+                        .title("Start/End")
+                )
+            } else {
+                // Numbered waypoint marker
+                mMap.addMarker(
+                    MarkerOptions()
+                        .position(waypoint)
+                        .title("Waypoint $index")
+                        .icon(BitmapDescriptorFactory.fromResource(MarkerMaker.getMarkerDrawableForNumber(index)))
+                )
+            }
         }
 
         // Zoom to fit the route
@@ -153,5 +193,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         mMap.animateCamera(
             CameraUpdateFactory.newLatLngBounds(bounds.build(), 100)
         )
+        Log.d("MapFragment", "Route drawn! Distance: ${route.distance}km")
     }
 }
