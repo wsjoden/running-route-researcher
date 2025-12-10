@@ -10,9 +10,9 @@ class RouteGenerator {
     fun generateCircularWaypoints(
         centerLocation: LatLng,
         distance: Double,
-        numberOfWayPoints: Int = 8,
         degrees: Double = 360.0
     ):List<LatLng> {
+        val numberOfWayPoints = calcAmountOfWayPoints(distance)
         val radius = distance / (2 * PI)
 
         val waypoints = mutableListOf<LatLng>()
@@ -51,5 +51,13 @@ class RouteGenerator {
             center.latitude + latOffset,
             center.longitude + lonOffset
         )
+    }
+
+    private fun calcAmountOfWayPoints(
+        distance: Double
+    ):Int {
+        return if (distance > 8){
+            ((distance / 2) + 3).toInt()
+        } else 6
     }
 }
