@@ -10,13 +10,14 @@ class RouteGenerator {
     fun generateCircularWaypoints(
         centerLocation: LatLng,
         distance: Double,
-        numberOfWayPoints: Int = 8
+        numberOfWayPoints: Int = 8,
+        degrees: Double = 360.0
     ):List<LatLng> {
         val radius = distance / (2 * PI)
 
         val waypoints = mutableListOf<LatLng>()
         // Angle between each waypoint
-        val angleStep = (2 * PI) / numberOfWayPoints
+        val angleStep = Math.toRadians(degrees) / numberOfWayPoints
 
         for(i in 0 until numberOfWayPoints){
             val angle = i * angleStep
