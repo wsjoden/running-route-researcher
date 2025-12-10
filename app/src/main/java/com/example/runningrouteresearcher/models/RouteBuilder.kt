@@ -17,10 +17,17 @@ class RouteBuilder {
     ): Route {
         // Step 1: Generate circular waypoints
         try {
+            val degrees = when {
+                radius < 1.0 -> 180.0
+                radius < 2.0 -> 270.0
+                else -> 360.0
+            }
+
             var waypoints = routeGenerator.generateCircularWaypoints(
                 centerLocation = userLocation,
                 distance = radius,
-                numberOfWayPoints = 8
+                numberOfWayPoints = 8,
+                degrees = degrees
             )
             // Step 2: Add user location as first and last waypoint
             waypoints = listOf(userLocation) + waypoints + listOf(userLocation)
