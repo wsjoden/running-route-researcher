@@ -6,9 +6,11 @@ import kotlin.math.pow
 object PolylineDecoder {
 
     /**
-     * Decodes an encoded polyline string into a list of LatLng points
-     * Algorithm from
-     * https://github.com/googlemaps/js-polyline-codec/blob/main/src/index.ts
+     * Decodes Google's encoded polyline format into individual LatLng points.
+     * OpenRouteService returns routes as encoded polylines.
+     *
+     * Algorithm: Google's polyline encoding algorithm
+     * Reference: https://github.com/googlemaps/js-polyline-codec
      */
     fun decode(
         encodedPath: String,
