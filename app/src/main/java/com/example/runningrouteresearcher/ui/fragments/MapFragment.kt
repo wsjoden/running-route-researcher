@@ -1,6 +1,6 @@
 package com.example.runningrouteresearcher.ui.fragments
 
-import com.example.runningrouteresearcher.utils.MarkerMaker
+import com.example.runningrouteresearcher.utils.MarkerUtil
 import android.Manifest
 import android.content.pm.PackageManager
 import com.example.runningrouteresearcher.R
@@ -10,7 +10,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -26,6 +28,21 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.material.button.MaterialButton
+
+/**
+ * Fragment for displaying and interacting with map
+ *
+ * Features:
+ * - Display Google maps map
+ * - Display generated route as polyline
+ * - Display route distance
+ * - Display waypoint markers
+ * - Display user location on launch, user can update their location via tap
+ * - Display loading during route generation
+ * - Pans map to user location
+ * - Adjust zoom to fit entire route
+ */
 
 class MapFragment : Fragment(), OnMapReadyCallback {
     private lateinit var mMap: GoogleMap
@@ -51,10 +68,23 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         return inflater.inflate(R.layout.fragment_map, container, false)
     }
 
+    /**
+     * Initialize UI views and set up observers
+     *
+     * Sets up:
+     * - Loading spinner
+     * - Location service client
+     * - Map initialization
+     * - Button click listeners
+     * - Viewmodel for route updates
+     */
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //Initialize location client
+        val loadingSpinner = view.findViewById<ProgressBar>(R.id.loading_spinner)
+
+        // Initialize location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         val mapFragment = childFragmentManager
@@ -68,18 +98,68 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
 
         // Handle My Location button click
-        val myLocationButton = view.findViewById<ImageButton>(R.id.my_location_button)
+        val myLocationButton = view.findViewById<MaterialButton>(R.id.my_location_button)
         myLocationButton.setOnClickListener {
             getCurrentLocation()
         }
 
+        // Route navigation buttons
+        val routeNavigation = view.findViewById<LinearLayout>(R.id.route_navigation)
+        val prevButton = view.findViewById<MaterialButton>(R.id.prev_route_button)
+        val nextButton = view.findViewById<MaterialButton>(R.id.next_route_button)
+        val routeCounter = view.findViewById<TextView>(R.id.route_counter)
+        val routeDistance = view.findViewById<TextView>(R.id.route_distance)
+
+        // Previous route button
+        prevButton.setOnClickListener {
+            val currentIndex = viewModel.currentRouteIndex.value ?: 0
+            if (currentIndex > 0) {
+                viewModel.switchToRoute(currentIndex - 1)
+            }
+        }
+        // Next route button
+        nextButton.setOnClickListener {
+            val currentIndex = viewModel.currentRouteIndex.value ?: 0
+            val totalRoutes = viewModel.routes.value?.size ?: 0
+            if (currentIndex < totalRoutes - 1) {
+                viewModel.switchToRoute(currentIndex + 1)
+            }
+        }
+
+        // Show/hide navigation buttons and update counter
+        viewModel.routes.observe(viewLifecycleOwner) { routes ->
+            if (routes != null && routes.size > 1) {
+                routeNavigation.visibility = View.VISIBLE
+            } else {
+                routeNavigation.visibility = View.GONE
+            }
+        }
+        // Update route counter and distance when route selection changes
+        viewModel.currentRouteIndex.observe(viewLifecycleOwner) { index ->
+            val total = viewModel.routes.value?.size ?: 0
+            routeCounter.text = "${index + 1}/$total"
+
+            val distance = viewModel.routes.value?.get(index)?.distance
+            if (distance != null) {
+                routeDistance.text = String.format("%.2f km", distance)
+            }
+        }
+        // Show/hide loading spinner during route generation
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            loadingSpinner.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+        // Draw route on map when route is generated
         viewModel.route.observe(viewLifecycleOwner) { route ->
             if (route != null) {
+                routeDistance.text = String.format("%.2f km", route.distance)
                 drawRouteOnMap(route)
             }
         }
     }
-
+    /**
+     * Opens settings bottom sheet for distance input
+     * Passes current user location to settings fragment
+     */
     private fun openSettings() {
         val settingsFragment = SettingsFragment()
         if(currentUserLocation != null) {
@@ -88,8 +168,32 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         settingsFragment.show(parentFragmentManager, "settings")
     }
 
+    /**
+     * Called when map is ready for interaction
+     *
+     * Sets up:
+     * - Tap listener for user to update start/end location
+     * - Location permission checker
+     * - GPS location retriever
+     */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+
+        // Set location on tap
+        mMap.setOnMapClickListener { latLng ->
+            currentUserLocation = latLng
+
+            // Update the marker
+            mMap.clear()
+            mMap.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .title("Starting Location")
+            )
+
+            Log.d("MapFragment", "Custom location set: $latLng")
+        }
+
 
         // Request location permission and get location
         if (ContextCompat.checkSelfPermission(
@@ -97,11 +201,25 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            getCurrentLocation()
+            // Delay to ensure map is fully initialized
+            view?.postDelayed({ getCurrentLocation() }, 500)
         } else {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
+
+    /**
+     * Retrieves GPS location via FusedLocationProviderClient and displays on map
+     *
+     * On success:
+     * - Sets currentUserLocation
+     * - Pans view to location
+     * - Adds marker
+     *
+     * On failure:
+     * - Logs warning but doesn't crash
+     *   since user can still manually set location
+     */
     private fun getCurrentLocation() {
         try {
             if (ContextCompat.checkSelfPermission(
@@ -116,6 +234,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                             currentUserLocation = userLocation
 
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15f))
+                            mMap.clear()
                             mMap.addMarker(
                                 MarkerOptions()
                                     .position(userLocation)
@@ -139,6 +258,20 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             e.printStackTrace()
         }
     }
+
+    /**
+     * Draws route on map
+     *
+     * Clears map and adds:
+     * 1. Start/End mark at user location
+     * 2. Blue polyline showing the route
+     * 3. Numbered waypoints
+     * 4. Adjusts view to show entire route
+     *
+     * Polyline is hundreds of points decoded from API's encoded polyline.
+     *
+     * @param route Route with polyline points with waypoints
+     */
     private fun drawRouteOnMap(route: Route) {
         Log.d("MapFragment", "drawRouteOnMap called")
         Log.d("MapFragment", "Route waypoints: ${route.waypoints.size}")
@@ -180,7 +313,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     MarkerOptions()
                         .position(waypoint)
                         .title("Waypoint $index")
-                        .icon(BitmapDescriptorFactory.fromResource(MarkerMaker.getMarkerDrawableForNumber(index)))
+                        .icon(BitmapDescriptorFactory.fromResource(MarkerUtil.getMarkerDrawableForNumber(index)))
                 )
             }
         }
