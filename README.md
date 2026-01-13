@@ -36,6 +36,14 @@ OpenRouteService Snap API is used to snap a given coordinate to the closest road
 OpenRouteService Driving Directions API is used to generate directions and polylines between waypoints.
 
 ## Future Improvements
+- Improve algorithm - less route overlap
+- UI
+- Mountain/Water/Road-less area detection
+- Loading times
+- Live GPS tracking
+- Conditional initial radius
+- Fine tune recursive attempts management
+- Fine tune waypoint amount management
 
 ## License
 
